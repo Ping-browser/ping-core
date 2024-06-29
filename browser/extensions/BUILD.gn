@@ -51,6 +51,8 @@ source_set("extensions") {
     "brave_theme_event_router.h",
     "updater/brave_update_client_config.cc",
     "updater/brave_update_client_config.h",
+    "api/pkcs11_api.cc",
+    "api/pkcs11_api.h",
   ]
 
   deps = [
