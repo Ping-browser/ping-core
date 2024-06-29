@@ -74,7 +74,7 @@ void AddLocalizedStrings(content::WebUIDataSource* html_source) {
        IDS_BRAVE_VPN_SUPPORT_OPTIONAL_OS_VERSION},
       {"braveVpnSupportNotes", IDS_BRAVE_VPN_SUPPORT_NOTES},
       {"braveVpnSupportSubmit", IDS_BRAVE_VPN_SUPPORT_SUBMIT},
-      {"braveVpnConnectNotAllowed", IDS_BRAVE_VPN_CONNECT_NOT_ALLOWED},
+      // {"braveVpnConnectNotAllowed", IDS_BRAVE_VPN_CONNECT_NOT_ALLOWED},
       {"braveVpnSupportTimezone", IDS_BRAVE_VPN_SUPPORT_TIMEZONE},
       {"braveVpnSessionExpiredTitle",
        IDS_BRAVE_VPN_MAIN_PANEL_SESSION_EXPIRED_PART_TITLE},

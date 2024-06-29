@@ -1,7 +1,8 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at https://mozilla.org/MPL/2.0/. */
-//@ts-nocheck
+// @ts-nocheck
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { pdfjs, Document, Page } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -23,7 +24,7 @@ export function PdfRenderer(props: Props) {
   const [isSelectionEnabled, setIsSelectionEnabled] = useState(false);
   const [isSigned, setIsSigned] = useState(false);
   const [selectionCoords, setSelectionCoords] = useState({ startX: 0, startY: 0, endX: 0, endY: 0 });
-
+  const [pdfBuff, setPdfBuff] = useState(0);
   const overlayCanvasRefs = useRef([]);
   const pdfCanvasRefs = useRef([]);
   const pdfContainerRef = useRef(null);
@@ -48,8 +49,10 @@ export function PdfRenderer(props: Props) {
     }
   }, []);
 
-  const handleFileInput = (event) => {
+  const handleFileInput = async(event) => {
     const file = event.target.files[0];
+    const pdfBuff = await file.arrayBuffer();
+    setPdfBuff(pdfBuff);
     if (file) {
       const reader = new FileReader();
       reader.onload = () => {
@@ -110,22 +113,81 @@ export function PdfRenderer(props: Props) {
     }
   };
 
-  const embedSignature = (pageIndex) => {
+  const embedSignature = async (pageIndex) => {
     const { startX, startY, endX, endY } = selectionCoords;
-    const overlayCtx = overlayCanvasRefs.current[pageIndex].getContext('2d');
-    overlayCtx.fillStyle = 'rgba(255, 255, 0, 0.5)';
-    overlayCtx.fillRect(startX, startY, endX - startX, endY - startY);
 
-    overlayCtx.font = '14px Arial';
-    overlayCtx.fillStyle = 'black';
-    overlayCtx.textAlign = 'left';
-    overlayCtx.textBaseline = 'top';
-    overlayCtx.fillText(fixedText, startX + 5, startY + 5);
+    // Example: Replace with your actual signing API endpoint
+    try {
+      const formData = new FormData();
+      formData.append('pdf', pdfBuff as Blob);
+      formData.append('pageIndex', String(pageIndex));
+      formData.append('selectionCoords', JSON.stringify({ startX, startY, endX, endY }));
 
-    setIsSelectionEnabled(false);
-    setIsSigned(true);
-    console.log(`Page number: ${pageIndex + 1}, Selected area coordinates: Start(${startX}, ${startY}) - End(${endX}, ${endY})`);
-    document.getElementById('signButton').disabled = true;
+      const response = await fetch('http://localhost:5000/v1/api/sign', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const signedPdfBuffer = await response.arrayBuffer();
+        setPdfFile(new File([signedPdfBuffer], `${pdfFile?.name}_signed.pdf`, { type: 'application/pdf' }));
+        setIsSigned(true);
+        setIsSelectionEnabled(false);
+        console.log(`Page number: ${pageIndex + 1}, Selected area coordinates: Start(${startX}, ${startY}) - End(${endX}, ${endY})`);
+        document.getElementById('signButton').disabled = true;
+      } else {
+        console.error('Failed to sign PDF:', response.statusText);
+        // Handle error condition here
+      }
+    } catch (error) {
+      console.error('Error signing PDF:', error);
+      // Handle error condition here
+    }
+  };
+
+  const verifyDocument = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('pdf', pdfBuff);
+      const response = await fetch('http://localhost:5000/v1/api/verify', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer your-token-here',
+        },
+      });
+  
+      if (response.ok) {
+        const verificationResult = await response.json();
+        if (verificationResult.verified) {
+          alert('Document verification successful!');
+        } else {
+          alert('Document verification failed.');
+        }
+      } else {
+        console.error('Failed to verify document:', response.statusText);
+        // Handle error condition here
+      }
+    } catch (error) {
+      console.error('Error verifying document:', error);
+      // Handle error condition here
+    }
+  };
+  
+  // Example integration within PdfRenderer component
+  const handleVerifyButtonClick = async () => {
+    try {
+      if(pdfBuff){
+        await verifyDocument(pdfBuff);
+      }
+      else{
+        alert('UPLOAD PDF FIRST');
+      }
+    } catch (error) {
+      console.error('Error initiating document verification:', error);
+      // Handle error condition here
+    }
   };
 
   const clearSelection = (pageIndex) => {
@@ -223,6 +285,12 @@ export function PdfRenderer(props: Props) {
             style={{ padding: '10px', marginRight: '10px', borderRadius: '5px' }}
           >
             Sign
+          </button>
+          <button 
+            onClick={handleVerifyButtonClick}
+            style={{ padding: '10px', marginRight: '10px', borderRadius: '5px' }}
+          >
+            Verify Document
           </button>
           <button 
             onClick={handlePreviousPage} 
